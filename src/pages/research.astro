@@ -1,0 +1,77 @@
+---
+import Base from '../layouts/Base.astro';
+import { getLab, getProjects } from '../lib/site';
+
+const lab = await getLab();
+const projects = await getProjects();
+const projectGroups = (['연구과제', '산학협력·창업지원'] as const)
+	.map((category) => ({ category, items: projects.filter((p) => p.category === category) }))
+	.filter((g) => g.items.length > 0);
+const period = (p: { start: number; end?: number }) =>
+	p.end === undefined ? `${p.start} – 현재` : p.end === p.start ? `${p.start}` : `${p.start} – ${p.end}`;
+---
+
+<Base title="연구">
+	<div class="container">
+		<header class="page-head">
+			<h1>연구 분야</h1>
+			<p>{lab.tagline}</p>
+		</header>
+
+		<div class="list">
+			{lab.research.map((r, i) => (
+				<article class="card row">
+					<span class="num">{String(i + 1).padStart(2, '0')}</span>
+					<div>
+						<h2>{r.title}</h2>
+						<p>{r.summary}</p>
+					</div>
+				</article>
+			))}
+		</div>
+
+		{projectGroups.map((g) => (
+			<section class="projects">
+				<h2 class="section-title">{g.category} <span class="count">{g.items.length}</span></h2>
+				<ul>
+					{g.items.map((p) => (
+						<li>
+							<div class="period">{period(p)}</div>
+							<div>
+								<div class="p-title">{p.title}</div>
+								<div class="muted meta">
+									{p.type && <span class="tag">{p.type}</span>}
+									{[p.agency, p.role, p.budget].filter(Boolean).join(' · ')}
+								</div>
+								{p.summary && <p class="muted">{p.summary}</p>}
+							</div>
+						</li>
+					))}
+				</ul>
+			</section>
+		))}
+	</div>
+</Base>
+
+<style>
+	.list { display: grid; gap: 16px; margin-top: 32px; }
+	.row { display: grid; grid-template-columns: 48px 1fr; gap: 12px; }
+	.num { color: var(--accent); font-weight: 800; font-size: 1.4rem; line-height: 1.3; }
+	.row h2 { font-size: 1.3rem; margin: 0 0 8px; }
+	.row p { margin: 0; }
+
+	.projects { margin-top: 56px; }
+	.projects ul { list-style: none; padding: 0; margin: 0; }
+	.projects li {
+		display: grid;
+		gap: 4px 20px;
+		padding: 16px 0;
+		border-bottom: 1px solid var(--line);
+	}
+	@media (min-width: 640px) { .projects li { grid-template-columns: 120px 1fr; } }
+	.period { color: var(--muted); font-variant-numeric: tabular-nums; }
+	.p-title { font-weight: 600; }
+	.meta { font-size: 0.92rem; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 4px; }
+	.count { font-size: 1rem; color: var(--accent); font-weight: 600; }
+	.projects p { margin: 6px 0 0; font-size: 0.95rem; }
+</style>

@@ -1,0 +1,188 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import meta from '../../data/autolab-meta.json';
+import { url } from '../../lib/site';
+import AutolabTabs from '../../components/AutolabTabs.astro';
+
+const { rubric } = meta;
+const runs = (await getCollection('autolab')).sort((a, b) => b.data.date.localeCompare(a.data.date) || b.data.score - a.data.score);
+const criteria = Object.entries(rubric.criteria) as [string, { name: string; weight: number; applies_to: string[] }][];
+const gates = Object.entries(rubric.gates) as [string, { name: string; rule: string }][];
+
+const agents = [
+	{ key: 'Planner', ko: '연구 설계', desc: '주제가 부식 연구인지 검토하고, 문헌 근거로 가설·실험 설계·수치화된 성공 기준을 세웁니다.', out: 'plan.md' },
+	{ key: 'Player', ko: '실험 수행', desc: '계획대로 실험 코드를 작성·실행하거나 시편 실험 프로토콜을 만들고, 결과·그림·로그를 남깁니다.', out: 'experiment/ · 실험 보고' },
+	{ key: 'Evaluator', ko: '독립 평가', desc: '실험을 직접 다시 실행해 재현성을 확인하고, 평가 기준표로 근거를 달아 채점합니다.', out: 'evaluation.md · scores.json' },
+];
+const verdictClass = (v: string) => (v.startsWith('PASS') ? 'pass' : 'incomplete');
+---
+
+<Base title="AI 자동 연구" description="MLC Lab의 AI 기반 부식 연구 자동화 파이프라인과 연구 진행 결과">
+	<div class="container">
+		<header class="page-head">
+			<p class="eyebrow">실험실 연구진행</p>
+			<h1>AI 자동 연구 (MLC Auto-Lab)</h1>
+			<p>세 개의 AI 에이전트가 계획 → 실험 → 평가를 반복하며 부식 연구를 수행하고, 정량 평가 기준을 통과한 결과만 보고서로 남깁니다.</p>
+		</header>
+		<AutolabTabs active="ai" />
+
+		<!-- 파이프라인 -->
+		<section class="section-block">
+			<h2 class="section-title">연구 진행 방식</h2>
+			<ol class="pipeline">
+				{agents.map((a, i) => (
+					<li class="card stage">
+						<span class="step">{String(i + 1).padStart(2, '0')}</span>
+						<h3>{a.ko} <span class="muted en">{a.key}</span></h3>
+						<p>{a.desc}</p>
+						<code>{a.out}</code>
+					</li>
+				))}
+			</ol>
+			<p class="loop">
+				<span class="tag">반복</span>
+				평가 점수가 {rubric.thresholds.pass}점 미만이거나 필수 조건을 통과하지 못하면, 평가자의 지적을 반영해 다시 계획하거나 실험합니다 (최대 {rubric.max_iterations}회).
+			</p>
+		</section>
+
+		<!-- 연구 대상 -->
+		<section class="section-block">
+			<h2 class="section-title">연구 대상</h2>
+			<div class="rubric">
+				<article class="card">
+					<h3>Zn flake 코팅</h3>
+					<p class="muted">Zn/Al 플레이크 배합·도막·경화 조건으로 SST 적청시간, 부착성, 절단면 성능을 예측하는 특허·문헌 기반 예측진단 모델(v3.7)을 출발점으로, 민감도·불확실성 분석과 실측 데이터 보정을 연구합니다.</p>
+				</article>
+				<article class="card">
+					<h3>Zn-Mg-Al 도금강판</h3>
+					<p class="muted">산업체 선행 과제의 단면 부식 정량화, 옥외폭로 경험을 바탕으로 가속시험·옥외폭로 수명 예측과 영상 기반 부식 정량화 모델을 개발합니다.</p>
+				</article>
+			</div>
+		</section>
+
+		<!-- 평가 기준 -->
+		<section class="section-block">
+			<h2 class="section-title">평가 기준</h2>
+			<div class="rubric">
+				<div class="card">
+					<h3>필수 조건 (Gate)</h3>
+					<p class="muted small">하나라도 통과하지 못하면 점수와 관계없이 통과할 수 없습니다.</p>
+					<ul class="gates">
+						{gates.map(([id, g]) => (
+							<li><strong>{id} {g.name}</strong><span class="muted">{g.rule}</span></li>
+						))}
+					</ul>
+				</div>
+				<div class="card">
+					<h3>채점 항목 (1–5점)</h3>
+					<table>
+						<thead><tr><th>항목</th><th class="num">가중치</th></tr></thead>
+						<tbody>
+							{criteria.map(([id, c]) => (
+								<tr>
+									<td>{id} {c.name}{c.applies_to.length === 1 && <span class="muted small"> (전산 실험)</span>}</td>
+									<td class="num">{c.weight}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+					<p class="thresholds">
+						<span class="badge pass">PASS ≥ {rubric.thresholds.pass}점</span>
+						<span class="badge excellent">우수 ≥ {rubric.thresholds.excellent}점</span>
+						<span class="muted small">100점 환산 · 1점 항목이 있으면 불통과</span>
+					</p>
+				</div>
+			</div>
+		</section>
+
+		<!-- 결과 -->
+		<section class="section-block">
+			<h2 class="section-title">연구 결과 <span class="count">{runs.length}</span></h2>
+			{runs.length === 0 ? (
+				<p class="card muted">아직 공개된 연구 결과가 없습니다.</p>
+			) : (
+				<ul class="runs">
+					{runs.map((r) => (
+						<li>
+							<a class="card run" href={url(`autolab/${r.id}`)}>
+								<div class={`score ${verdictClass(r.data.verdict)}`}>
+									<strong>{r.data.score}</strong>
+									<span>{r.data.verdict}</span>
+								</div>
+								<div>
+									<h3>{r.data.title}</h3>
+									<p class="muted meta">{r.data.date} · {r.data.mode === 'wet-lab' ? '시편 실험 설계' : '전산 실험'} · {r.data.iterations}회 반복</p>
+									{r.data.summary && <p class="summary">{r.data.summary}</p>}
+								</div>
+							</a>
+						</li>
+					))}
+				</ul>
+			)}
+			<p class="muted small note">
+				※ 자동 연구 결과는 모델 예측·문헌·공개 데이터를 바탕으로 한 예비 연구이며, 실측 시험으로 검증되기 전까지 재료 성능을 보증하지 않습니다.
+			</p>
+		</section>
+	</div>
+</Base>
+
+<style>
+	.eyebrow { color: var(--accent); font-weight: 600; margin: 0 0 4px; }
+	.section-block { margin-top: 48px; }
+	.pipeline { list-style: none; padding: 0; margin: 0; display: grid; gap: 16px; counter-reset: s; }
+	@media (min-width: 860px) {
+		.pipeline { grid-template-columns: repeat(3, 1fr); }
+		.stage:not(:last-child)::after {
+			content: '→';
+			position: absolute;
+			right: -14px;
+			top: 50%;
+			transform: translateY(-50%);
+			color: var(--accent);
+			font-weight: 700;
+			background: var(--bg);
+			padding: 2px 0;
+		}
+	}
+	.stage { position: relative; display: flex; flex-direction: column; gap: 6px; }
+	.stage h3 { margin: 0; font-size: 1.15rem; }
+	.stage p { margin: 0; flex: 1; }
+	.stage code { font-size: 0.8rem; color: var(--muted); }
+	.step { color: var(--accent); font-weight: 800; }
+	.en { font-size: 0.85rem; font-weight: 400; }
+	.loop { display: flex; gap: 8px; align-items: baseline; margin: 16px 0 0; }
+	.loop .tag { flex: none; }
+
+	.card h3 { margin-top: 0; }
+	.rubric { display: grid; gap: 16px; }
+	@media (min-width: 860px) { .rubric { grid-template-columns: 1fr 1fr; } }
+	.gates { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 10px; }
+	.gates li { display: grid; gap: 2px; }
+	.gates span { font-size: 0.9rem; }
+	table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+	th, td { text-align: left; padding: 6px 0; border-bottom: 1px solid var(--line); }
+	.num { text-align: right; font-variant-numeric: tabular-nums; }
+	.thresholds { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0 0; }
+	.badge { font-size: 0.8rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+	.badge.pass, .score.pass { background: #e3f1e6; color: #1f6b35; }
+	.badge.excellent { background: var(--accent-soft); color: var(--accent); }
+	.score.incomplete { background: #f3ecdc; color: #7a5a12; }
+	@media (prefers-color-scheme: dark) {
+		.badge.pass, .score.pass { background: #1d3325; color: #8fd3a3; }
+		.score.incomplete { background: #3a3020; color: #e3c27a; }
+	}
+	.small { font-size: 0.85rem; }
+	.count { font-size: 1rem; color: var(--accent); font-weight: 600; }
+
+	.runs { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+	.run { display: grid; grid-template-columns: 88px 1fr; gap: 16px; color: var(--text); }
+	.run:hover { text-decoration: none; border-color: var(--accent); }
+	.score { border-radius: 12px; display: grid; place-content: center; text-align: center; padding: 10px 4px; height: fit-content; }
+	.score strong { font-size: 1.5rem; line-height: 1.1; }
+	.score span { font-size: 0.72rem; font-weight: 700; }
+	.run h3 { margin: 0 0 2px; font-size: 1.1rem; color: var(--brand); }
+	.meta { margin: 0; font-size: 0.88rem; }
+	.summary { margin: 8px 0 0; font-size: 0.95rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+	.note { margin-top: 16px; }
+</style>

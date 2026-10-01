@@ -1,0 +1,31 @@
+---
+import { formatDate, url } from '../lib/site';
+
+interface Props {
+	items: { id: string; data: { title: string; date: Date } }[];
+}
+const { items } = Astro.props;
+---
+
+<ul class="news">
+	{items.map((item) => (
+		<li>
+			<time datetime={item.data.date.toISOString()}>{formatDate(item.data.date)}</time>
+			<a href={url(`news/${item.id}`)}>{item.data.title}</a>
+		</li>
+	))}
+</ul>
+
+<style>
+	.news { list-style: none; padding: 0; margin: 0; }
+	.news li {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px 20px;
+		padding: 14px 0;
+		border-bottom: 1px solid var(--line);
+	}
+	.news time { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 90px; }
+	.news a { color: var(--text); font-weight: 500; }
+	.news a:hover { color: var(--accent); }
+</style>

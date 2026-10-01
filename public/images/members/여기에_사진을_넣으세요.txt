@@ -1,0 +1,1 @@
+﻿구성원 사진(jpg/png)을 이 폴더에 넣고, src/data/members.yaml 의 photo: 에 파일 이름을 적으세요. 예) photo: hong.jpg

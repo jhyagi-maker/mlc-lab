@@ -1,0 +1,94 @@
+---
+import Base from '../layouts/Base.astro';
+import NewsList from '../components/NewsList.astro';
+import PubItem from '../components/PubItem.astro';
+import { getLab, getNews, getPublications, url } from '../lib/site';
+
+const lab = await getLab();
+const news = (await getNews()).slice(0, 4);
+const featured = (await getPublications()).filter((p) => p.highlight).slice(0, 4);
+---
+
+<Base>
+	<section class="hero">
+		<div class="container">
+			<p class="eyebrow">{lab.affiliation}</p>
+			<h1>{lab.name}</h1>
+			{lab.nameEn && <p class="name-en">{lab.nameEn}</p>}
+			<p class="tagline">{lab.tagline}</p>
+			<div class="actions">
+				<a class="btn" href={url('research')}>연구 분야 보기</a>
+				{lab.recruiting && <a class="btn ghost" href={url('contact')}>학생 모집 중</a>}
+			</div>
+		</div>
+	</section>
+
+	<section class="section">
+		<div class="container intro">
+			<h2 class="section-title">연구실 소개</h2>
+			<p>{lab.intro}</p>
+		</div>
+	</section>
+
+	<section class="section alt">
+		<div class="container">
+			<div class="section-head">
+				<h2 class="section-title">연구 분야</h2>
+				<a href={url('research')}>자세히 →</a>
+			</div>
+			<div class="grid">
+				{lab.research.map((r, i) => (
+					<article class="card">
+						<span class="num">{String(i + 1).padStart(2, '0')}</span>
+						<h3>{r.title}</h3>
+						<p class="muted">{r.summary}</p>
+					</article>
+				))}
+			</div>
+		</div>
+	</section>
+
+	<section class="section">
+		<div class="container two-col">
+			<div>
+				<div class="section-head">
+					<h2 class="section-title">최근 소식</h2>
+					<a href={url('news')}>전체 →</a>
+				</div>
+				<NewsList items={news} />
+			</div>
+			<div>
+				<div class="section-head">
+					<h2 class="section-title">대표 논문</h2>
+					<a href={url('publications')}>전체 →</a>
+				</div>
+				<ul class="plain">{featured.map((pub) => <PubItem pub={pub} />)}</ul>
+			</div>
+		</div>
+	</section>
+</Base>
+
+<style>
+	.hero {
+		padding: 88px 0 72px;
+		background:
+			radial-gradient(circle at 85% 20%, var(--accent-soft), transparent 45%),
+			linear-gradient(180deg, var(--surface), var(--bg));
+		border-bottom: 1px solid var(--line);
+	}
+	.eyebrow { color: var(--accent); font-weight: 600; margin: 0 0 8px; }
+	.hero h1 { font-size: clamp(2rem, 6vw, 3.2rem); margin: 0; }
+	.name-en { color: var(--muted); font-size: 1.1rem; margin: 4px 0 0; }
+	.tagline { font-size: 1.15rem; max-width: 640px; margin: 24px 0 32px; }
+	.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+	.btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+	.intro p { white-space: pre-line; max-width: 760px; font-size: 1.05rem; margin: 0; }
+	.alt { background: var(--surface); border-block: 1px solid var(--line); }
+	.alt .card { background: var(--bg); }
+	.card h3 { margin: 8px 0; font-size: 1.15rem; }
+	.card p { margin: 0; }
+	.num { color: var(--accent); font-weight: 700; font-size: 0.85rem; }
+	.two-col { display: grid; gap: 48px; }
+	@media (min-width: 900px) { .two-col { grid-template-columns: 1fr 1fr; } }
+	.plain { padding: 0; margin: 0; }
+</style>

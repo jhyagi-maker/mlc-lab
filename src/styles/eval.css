@@ -1,0 +1,27 @@
+/* 부식 평가 카드 — 결과표(EvalCard.astro)와 입력 계산기(브라우저 렌더)가 함께 쓴다 */
+.eval { display: grid; gap: 12px; }
+.eval-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: flex-start; }
+.eval h3 { margin: 0; font-size: 1.1rem; }
+.eval h3 .muted { font-weight: 400; font-size: 0.95rem; }
+.eval .meta { margin: 2px 0 0; font-size: 0.85rem; }
+.grade { font-size: 0.82rem; font-weight: 700; padding: 4px 12px; border-radius: 999px; white-space: nowrap; }
+.grade.good { background: #e3f1e6; color: #1f6b35; }
+.grade.fair { background: #f3ecdc; color: #7a5a12; }
+.grade.poor { background: #f8e3d4; color: #9a4512; }
+.grade.bad { background: #f6dcdc; color: #9b2222; }
+.grade.info { background: var(--line); color: var(--muted); }
+@media (prefers-color-scheme: dark) {
+	.grade.good { background: #1d3325; color: #8fd3a3; }
+	.grade.fair { background: #3a3020; color: #e3c27a; }
+	.grade.poor { background: #3d2618; color: #f0a874; }
+	.grade.bad { background: #3d1c1c; color: #f09a9a; }
+}
+.metrics { display: grid; grid-template-columns: minmax(120px, max-content) 1fr; gap: 4px 16px; margin: 0; font-size: 0.95rem; }
+.metrics dt { color: var(--muted); }
+.metrics dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.remarks { margin: 0; padding-left: 18px; font-size: 0.9rem; color: var(--muted); }
+.missing { margin: 0; font-size: 0.9rem; color: #9b2222; }
+.recs summary { cursor: pointer; font-weight: 700; color: var(--brand); }
+.recs ol { margin: 8px 0 0; padding-left: 20px; font-size: 0.93rem; }
+.recs li { margin: 3px 0; }
+.eval .notes { margin: 0; font-size: 0.85rem; }

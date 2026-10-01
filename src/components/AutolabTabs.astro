@@ -1,0 +1,23 @@
+---
+import { url } from '../lib/site';
+
+interface Props { active: 'experiments' | 'ai'; }
+const { active } = Astro.props;
+const tabs = [
+	{ key: 'experiments', href: 'autolab/experiments', label: '실험 결과 평가' },
+	{ key: 'ai', href: 'autolab', label: 'AI 자동 연구' },
+];
+---
+
+<nav class="tabs" aria-label="실험실 연구진행 메뉴">
+	{tabs.map((t) => (
+		<a href={url(t.href)} aria-current={t.key === active ? 'page' : undefined}>{t.label}</a>
+	))}
+</nav>
+
+<style>
+	.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-top: 16px; }
+	.tabs a { padding: 10px 16px; color: var(--muted); font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+	.tabs a:hover { text-decoration: none; color: var(--text); }
+	.tabs a[aria-current='page'] { color: var(--accent); border-bottom-color: var(--accent); }
+</style>

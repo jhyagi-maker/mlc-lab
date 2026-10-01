@@ -1,0 +1,39 @@
+---
+import { maskName, type Evaluation, type ExperimentInput } from '../lib/corrosion-eval';
+
+interface Props {
+	input: ExperimentInput & { row?: number };
+	ev: Evaluation;
+}
+const { input, ev } = Astro.props;
+---
+
+<article class="card eval">
+	<header class="eval-head">
+		<div>
+			<h3>{input.sample} <span class="muted">· {input.material}</span></h3>
+			<p class="muted meta">
+				{ev.title}{input.student && ` · ${maskName(input.student)}`}{input.date && ` · ${input.date}`}{input.replicate_n && ` · n=${input.replicate_n}`}{input.row && ` · CSV ${input.row}행`}
+			</p>
+		</div>
+		<span class={`grade ${ev.grade.level}`}>{ev.grade.label}</span>
+	</header>
+
+	{ev.missing.length > 0 && <p class="missing">입력 부족: {ev.missing.join(', ')}</p>}
+
+	{ev.metrics.length > 0 && (
+		<dl class="metrics">
+			{ev.metrics.map((m) => (<><dt>{m.label}</dt><dd>{m.value}</dd></>))}
+		</dl>
+	)}
+
+	{ev.remarks.length > 0 && <ul class="remarks">{ev.remarks.map((r) => <li>{r}</li>)}</ul>}
+
+	{ev.recommendations.length > 0 && (
+		<details class="recs" open>
+			<summary>추가 실험 제안 ({ev.recommendations.length})</summary>
+			<ol>{ev.recommendations.map((r) => <li>{r}</li>)}</ol>
+		</details>
+	)}
+	{input.notes && <p class="muted notes">메모: {input.notes}</p>}
+</article>

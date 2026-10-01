@@ -1,0 +1,40 @@
+---
+interface Props {
+	pub: {
+		title: string;
+		authors: string;
+		venue: string;
+		year: number;
+		type: string;
+		link?: string;
+	};
+}
+const { pub } = Astro.props;
+---
+
+<li class="pub">
+	<span class="tag">{pub.type}</span>
+	<div>
+		<div class="pub-title">
+			{pub.link ? <a href={pub.link} target="_blank" rel="noopener">{pub.title}</a> : pub.title}
+		</div>
+		<div class="muted">{pub.authors}</div>
+		<div class="venue"><em>{pub.venue}</em>, {pub.year}</div>
+	</div>
+</li>
+
+<style>
+	.pub {
+		display: grid;
+		grid-template-columns: 56px 1fr;
+		gap: 12px;
+		padding: 16px 0;
+		border-bottom: 1px solid var(--line);
+		list-style: none;
+	}
+	.pub .tag { justify-self: start; height: fit-content; margin-top: 3px; }
+	.pub-title { font-weight: 600; }
+	.pub-title a { color: var(--text); }
+	.pub-title a:hover { color: var(--accent); }
+	.venue { font-size: 0.92rem; }
+</style>

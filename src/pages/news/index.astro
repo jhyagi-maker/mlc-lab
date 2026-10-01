@@ -1,0 +1,21 @@
+---
+import Base from '../../layouts/Base.astro';
+import NewsList from '../../components/NewsList.astro';
+import { getNews } from '../../lib/site';
+
+const news = await getNews();
+---
+
+<Base title="소식">
+	<div class="container">
+		<header class="page-head">
+			<h1>소식</h1>
+			<p>연구실의 새로운 소식을 전합니다.</p>
+		</header>
+		<div class="list"><NewsList items={news} /></div>
+	</div>
+</Base>
+
+<style>
+	.list { margin-top: 24px; max-width: 760px; }
+</style>

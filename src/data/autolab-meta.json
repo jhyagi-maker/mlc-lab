@@ -1,0 +1,97 @@
+{
+  "rubric": {
+    "version": 1,
+    "scale": {
+      "min": 1,
+      "max": 5
+    },
+    "max_iterations": 3,
+    "thresholds": {
+      "pass": 70,
+      "excellent": 85,
+      "min_item": 2
+    },
+    "gates": {
+      "G1": {
+        "name": "부식 주제 적합성",
+        "rule": "연구 질문이 부식(메커니즘·예측·방식·모니터링)에 관한 것인가",
+        "on_fail": "REJECT"
+      },
+      "G2": {
+        "name": "데이터 정직성",
+        "rule": "합성·시뮬레이션·문헌 데이터의 성격과 출처를 명시했고, 실측처럼 서술하지 않았는가",
+        "on_fail": "REVISE"
+      },
+      "G3": {
+        "name": "재현성",
+        "rule": "Evaluator가 run 명령을 다시 실행해 metrics.json 핵심 지표를 허용오차 안에서 재현했는가",
+        "applies_to": [
+          "computational"
+        ],
+        "on_fail": "REVISE"
+      },
+      "G4": {
+        "name": "필수 산출물",
+        "rule": "scripts/check_run.py 검사를 통과했는가",
+        "on_fail": "REVISE"
+      }
+    },
+    "criteria": {
+      "C1": {
+        "name": "연구 질문·가설 명확성",
+        "weight": 10,
+        "applies_to": [
+          "computational",
+          "wet-lab"
+        ]
+      },
+      "C2": {
+        "name": "실험 설계 타당성",
+        "weight": 20,
+        "applies_to": [
+          "computational",
+          "wet-lab"
+        ]
+      },
+      "C3": {
+        "name": "부식과학적 타당성",
+        "weight": 15,
+        "applies_to": [
+          "computational",
+          "wet-lab"
+        ]
+      },
+      "C4": {
+        "name": "실행 충실도·재현성",
+        "weight": 15,
+        "applies_to": [
+          "computational"
+        ]
+      },
+      "C5": {
+        "name": "결과의 정량성·통계적 엄밀성",
+        "weight": 20,
+        "applies_to": [
+          "computational"
+        ]
+      },
+      "C6": {
+        "name": "해석의 정직성·한계 서술",
+        "weight": 10,
+        "applies_to": [
+          "computational",
+          "wet-lab"
+        ]
+      },
+      "C7": {
+        "name": "산출물 완성도",
+        "weight": 10,
+        "applies_to": [
+          "computational",
+          "wet-lab"
+        ]
+      }
+    }
+  },
+  "syncedAt": "2026-10-01T07:02:05.338Z"
+}

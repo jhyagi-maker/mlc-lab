@@ -1,0 +1,261 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import AutolabTabs from '../../components/AutolabTabs.astro';
+import EvalCard from '../../components/EvalCard.astro';
+import '../../styles/eval.css';
+import { aggregateRecommendations, evaluate, MATERIALS, TEST_LABELS, type ExperimentInput } from '../../lib/corrosion-eval';
+
+const rows = (await getCollection('experiments')).map((e) => e.data).sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || b.row - a.row);
+const evaluated = rows.map((r) => ({ input: r as ExperimentInput & { row: number }, ev: evaluate(r as ExperimentInput) }));
+const plan = aggregateRecommendations(evaluated.map(({ input, ev }) => ({ sample: input.sample, ev })));
+const counts = evaluated.reduce<Record<string, number>>((acc, { ev }) => ((acc[ev.grade.level] = (acc[ev.grade.level] ?? 0) + 1), acc), {});
+const testOptions = Object.entries(TEST_LABELS);
+---
+
+<Base title="실험 결과 평가" description="부식 실험 측정값을 입력하면 규격 기반 평가와 추가 실험 제안을 보여 줍니다.">
+	<div class="container">
+		<header class="page-head">
+			<p class="eyebrow">실험실 연구진행</p>
+			<h1>실험 결과 평가</h1>
+			<p>부식 실험 측정값을 넣으면 규격(ASTM G1·G102, NACE SP0775, ISO 9223·9227)에 따라 부식 정도를 평가하고, 필요한 추가 실험을 정리해 줍니다.</p>
+		</header>
+		<AutolabTabs active="experiments" />
+
+		<!-- 1. 입력 계산기 -->
+		<section class="section-block">
+			<h2 class="section-title">결과 입력하기</h2>
+			<form id="eval-form" class="card form" autocomplete="off">
+				<div class="row3">
+					<label>시험 종류
+						<select name="test" required>
+							{testOptions.map(([k, v]) => <option value={k}>{v}</option>)}
+						</select>
+					</label>
+					<label>재료
+						<select name="material">
+							{Object.keys(MATERIALS).map((m) => <option>{m}</option>)}
+							<option value="__other">기타 (직접 입력)</option>
+						</select>
+					</label>
+					<label class="other-material" hidden>재료 이름
+						<input name="material_other" placeholder="예: STS304" />
+					</label>
+				</div>
+				<div class="row3">
+					<label>시편 이름 <input name="sample" required placeholder="예: ZF-A01" /></label>
+					<label>실험자 <input name="student" placeholder="이름 (공개 시 우ㅇ훈처럼 자동 가림)" /></label>
+					<label>날짜 <input name="date" type="date" /></label>
+				</div>
+				<div class="row3">
+					<label>반복 시편 수 n <input name="replicate_n" type="number" min="1" step="1" placeholder="3" /></label>
+					<label>도막/도금 두께 (µm) <input name="coating_thickness_um" type="number" step="any" /></label>
+				</div>
+
+				<fieldset data-tests="weight_loss outdoor">
+					<legend>무게감량 측정값</legend>
+					<div class="row3">
+						<label>시편 면적 (cm²) * <input name="area_cm2" type="number" step="any" /></label>
+						<label>노출 시간 (h) * <input name="exposure_h" type="number" step="any" /></label>
+						<label>무게 감량 (g) * <input name="mass_loss_g" type="number" step="any" /></label>
+						<label>최대 피트 깊이 (µm) <input name="max_pit_depth_um" type="number" step="any" /></label>
+						<label>밀도 (g/cm³, 생략 시 재료 기본값) <input name="density_g_cm3" type="number" step="any" /></label>
+					</div>
+				</fieldset>
+				<fieldset data-tests="polarization">
+					<legend>동전위 분극 측정값</legend>
+					<div class="row3">
+						<label>icorr (µA/cm²) * <input name="icorr_uA_cm2" type="number" step="any" /></label>
+						<label>당량 EW (g, 생략 시 기본값) <input name="ew_g" type="number" step="any" /></label>
+						<label>밀도 (g/cm³, 생략 시 기본값) <input name="density_g_cm3_p" type="number" step="any" /></label>
+					</div>
+				</fieldset>
+				<fieldset data-tests="sst">
+					<legend>염수분무 시험 결과</legend>
+					<div class="row3">
+						<label>적청 발생 (h) * <input name="sst_red_rust_h" type="number" step="any" /></label>
+						<label>백청 발생 (h) <input name="sst_white_rust_h" type="number" step="any" /></label>
+						<label>목표 시간 (h) <input name="target_h" type="number" step="any" placeholder="720" /></label>
+					</div>
+					<label class="check"><input name="sst_censored" type="checkbox" value="1" /> 시험 종료 시점까지 적청이 발생하지 않음 (적청 시간 = 종료 시간)</label>
+				</fieldset>
+				<fieldset data-tests="eis">
+					<legend>EIS 측정값</legend>
+					<div class="row3">
+						<label>|Z| at 0.01 Hz (Ω·cm²) * <input name="z_lowfreq_ohm_cm2" type="text" inputmode="decimal" placeholder="예: 3.2e8" /></label>
+					</div>
+				</fieldset>
+				<label>메모 <input name="notes" placeholder="시험 조건, 특이사항" /></label>
+				<div class="actions">
+					<button type="submit" class="btn">평가하기</button>
+					<span class="muted small">* 필수 입력 · 입력값은 이 브라우저 밖으로 전송되지 않습니다.</span>
+				</div>
+			</form>
+
+			<div id="eval-output" class="output" hidden>
+				<div id="eval-card"></div>
+				<div class="card share">
+					<h3>결과표에 올리기</h3>
+					<p class="muted small">아래 한 줄을 복사해 <code>src/data/experiments.csv</code> 맨 아래에 붙여넣으면 이 페이지 결과표와 추가 실험 계획에 반영됩니다.</p>
+					<pre id="csv-row"></pre>
+					<button type="button" id="copy-csv" class="btn ghost">CSV 한 줄 복사</button>
+				</div>
+			</div>
+		</section>
+
+		<!-- 2. 추가 실험 계획 -->
+		<section class="section-block">
+			<h2 class="section-title">추가 실험 계획 <span class="count">{plan.length}</span></h2>
+			{plan.length === 0 ? (
+				<p class="card muted">등록된 결과가 없습니다. 결과표에 실험 결과가 쌓이면 시편별 평가에서 나온 추가 실험이 여기에 우선순위대로 모입니다.</p>
+			) : (
+				<ol class="card plan">
+					{plan.map((p) => (
+						<li>
+							<span>{p.text}</span>
+							<span class="muted small">대상 {p.samples.length}개: {p.samples.join(', ')}</span>
+						</li>
+					))}
+				</ol>
+			)}
+		</section>
+
+		<!-- 3. 결과표 -->
+		<section class="section-block">
+			<h2 class="section-title">등록된 실험 결과 <span class="count">{evaluated.length}</span></h2>
+			{evaluated.length > 0 && (
+				<p class="summary-line">
+					{counts.good && <span class="grade good">양호 {counts.good}</span>}
+					{counts.fair && <span class="grade fair">보통 {counts.fair}</span>}
+					{counts.poor && <span class="grade poor">주의 {counts.poor}</span>}
+					{counts.bad && <span class="grade bad">불량 {counts.bad}</span>}
+					{counts.info && <span class="grade info">판정 보류 {counts.info}</span>}
+				</p>
+			)}
+			{evaluated.length === 0 ? (
+				<p class="card muted">아직 등록된 실험 결과가 없습니다.</p>
+			) : (
+				<div class="results">{evaluated.map(({ input, ev }) => <EvalCard input={input} ev={ev} />)}</div>
+			)}
+		</section>
+
+		<details class="card guide section-block">
+			<summary>평가 기준과 계산식 보기</summary>
+			<ul>
+				<li><strong>무게감량 부식속도</strong> (ASTM G1): CR [mm/y] = 87,600 × W[g] / (A[cm²] × T[h] × ρ[g/cm³])</li>
+				<li><strong>전기화학 부식속도</strong> (ASTM G102): CR [mm/y] = 3.27×10⁻³ × icorr[µA/cm²] × EW / ρ</li>
+				<li><strong>부식속도 등급</strong> (NACE SP0775, 탄소강): &lt;0.025 낮음 · 0.025–0.12 보통 · 0.13–0.25 높음 · &gt;0.25 mm/y 심각</li>
+				<li><strong>대기 부식성</strong> (ISO 9223, 아연 1년차): C1 ≤0.1 · C2 ≤0.7 · C3 ≤2.1 · C4 ≤4.2 · C5 ≤8.4 · CX ≤25 µm/y</li>
+				<li><strong>염수분무</strong> (ISO 9227): 목표 시간 대비 적청 발생 시간, 두께당 내식 시간(h/µm). 시험 종료까지 적청이 없으면 중도절단으로 표시</li>
+				<li><strong>EIS</strong>: |Z|<sub>0.01Hz</sub> ≥10⁹ 우수 · 10⁶–10⁹ 저하 진행 · &lt;10⁶ Ω·cm² 불량 (유기 코팅 경험칙)</li>
+				<li>Zn 계열 재료는 Zn 당량(32.68 g)·밀도(7.13 g/cm³)로 근사하며, 실제 합금 값을 알면 직접 입력하세요.</li>
+			</ul>
+		</details>
+	</div>
+</Base>
+
+<script>
+	import { evaluate, maskName, toCsvRow, type ExperimentInput, type Evaluation } from '../../lib/corrosion-eval';
+
+	const form = document.getElementById('eval-form') as HTMLFormElement;
+	const out = document.getElementById('eval-output')!;
+	const card = document.getElementById('eval-card')!;
+	const csv = document.getElementById('csv-row')!;
+	const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+
+	function syncFields() {
+		const test = (form.elements.namedItem('test') as HTMLSelectElement).value;
+		form.querySelectorAll<HTMLFieldSetElement>('fieldset[data-tests]').forEach((fs) => {
+			const on = fs.dataset.tests!.split(' ').includes(test);
+			fs.hidden = !on;
+			fs.disabled = !on;
+		});
+		const other = (form.elements.namedItem('material') as HTMLSelectElement).value === '__other';
+		form.querySelector<HTMLElement>('.other-material')!.hidden = !other;
+	}
+
+	function readInput(): ExperimentInput {
+		const fd = new FormData(form);
+		const s = (k: string) => (fd.get(k) as string | null)?.trim() || undefined;
+		const n = (k: string) => { const v = s(k); return v === undefined ? undefined : Number(v); };
+		const material = s('material') === '__other' ? s('material_other') ?? '기타' : s('material')!;
+		return {
+			date: s('date'), student: s('student'), sample: s('sample') ?? '(이름 없음)', material,
+			test: s('test') as ExperimentInput['test'], replicate_n: n('replicate_n'), coating_thickness_um: n('coating_thickness_um'),
+			area_cm2: n('area_cm2'), exposure_h: n('exposure_h'), mass_loss_g: n('mass_loss_g'),
+			density_g_cm3: n('density_g_cm3') ?? n('density_g_cm3_p'), max_pit_depth_um: n('max_pit_depth_um'),
+			icorr_uA_cm2: n('icorr_uA_cm2'), ew_g: n('ew_g'),
+			sst_white_rust_h: n('sst_white_rust_h'), sst_red_rust_h: n('sst_red_rust_h'),
+			sst_censored: fd.get('sst_censored') ? 1 : undefined, target_h: n('target_h'),
+			z_lowfreq_ohm_cm2: n('z_lowfreq_ohm_cm2'), notes: s('notes'),
+		};
+	}
+
+	function render(e: ExperimentInput, ev: Evaluation) {
+		const meta = [ev.title, maskName(e.student), e.date, e.replicate_n && `n=${e.replicate_n}`].filter(Boolean).join(' · ');
+		card.innerHTML = `
+			<article class="card eval">
+				<header class="eval-head">
+					<div><h3>${esc(e.sample)} <span class="muted">· ${esc(e.material)}</span></h3><p class="muted meta">${esc(meta)}</p></div>
+					<span class="grade ${ev.grade.level}">${esc(ev.grade.label)}</span>
+				</header>
+				${ev.missing.length ? `<p class="missing">입력 부족: ${esc(ev.missing.join(', '))}</p>` : ''}
+				${ev.metrics.length ? `<dl class="metrics">${ev.metrics.map((m) => `<dt>${esc(m.label)}</dt><dd>${esc(m.value)}</dd>`).join('')}</dl>` : ''}
+				${ev.remarks.length ? `<ul class="remarks">${ev.remarks.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}
+				${ev.recommendations.length ? `<details class="recs" open><summary>추가 실험 제안 (${ev.recommendations.length})</summary><ol>${ev.recommendations.map((r) => `<li>${esc(r)}</li>`).join('')}</ol></details>` : ''}
+			</article>`;
+		csv.textContent = toCsvRow(e);
+		out.hidden = false;
+		out.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	}
+
+	form.addEventListener('change', syncFields);
+	form.addEventListener('submit', (ev) => {
+		ev.preventDefault();
+		const input = readInput();
+		render(input, evaluate(input));
+	});
+	document.getElementById('copy-csv')!.addEventListener('click', async (e) => {
+		const btn = e.currentTarget as HTMLButtonElement;
+		try { await navigator.clipboard.writeText(csv.textContent ?? ''); btn.textContent = '복사됨 ✓'; }
+		catch { btn.textContent = '직접 선택해 복사하세요'; }
+		setTimeout(() => (btn.textContent = 'CSV 한 줄 복사'), 2000);
+	});
+	syncFields();
+</script>
+
+<style>
+	.eyebrow { color: var(--accent); font-weight: 600; margin: 0 0 4px; }
+	.section-block { margin-top: 40px; }
+	.count { font-size: 1rem; color: var(--accent); font-weight: 600; }
+	.small { font-size: 0.85rem; }
+
+	.form { display: grid; gap: 14px; }
+	.row3 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+	label { display: grid; gap: 4px; font-size: 0.88rem; font-weight: 600; color: var(--muted); }
+	label[hidden] { display: none; }
+	label.check { display: flex; gap: 8px; align-items: center; font-weight: 500; margin-top: 8px; }
+	input, select {
+		font: inherit; font-size: 0.95rem; color: var(--text); background: var(--bg);
+		border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0;
+	}
+	input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+	fieldset { border: 1px dashed var(--line); border-radius: 10px; padding: 12px 14px 14px; margin: 0; }
+	fieldset[hidden] { display: none; }
+	legend { font-weight: 700; color: var(--brand); padding: 0 6px; }
+	.actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+	button.btn { border: 0; cursor: pointer; font: inherit; }
+	.btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+
+	.output { display: grid; gap: 16px; margin-top: 16px; }
+	.share h3 { margin: 0 0 6px; }
+	.share pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; overflow-x: auto; font-size: 0.8rem; }
+
+	.plan { padding-left: 36px; display: grid; gap: 10px; }
+	.plan li { display: grid; gap: 2px; }
+	.summary-line { display: flex; flex-wrap: wrap; gap: 8px; }
+	.results { display: grid; gap: 14px; }
+	.guide summary { cursor: pointer; font-weight: 700; color: var(--brand); }
+	.guide ul { margin: 12px 0 0; padding-left: 20px; font-size: 0.92rem; }
+	.guide li { margin: 4px 0; }
+</style>

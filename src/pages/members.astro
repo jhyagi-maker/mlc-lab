@@ -1,0 +1,126 @@
+---
+import Base from '../layouts/Base.astro';
+import { getMembers, roleOrder, url } from '../lib/site';
+
+const members = await getMembers();
+const professors = members.filter((m) => m.role === '교수');
+const groups = roleOrder
+	.filter((role) => role !== '교수')
+	.map((role) => ({ role, people: members.filter((m) => m.role === role) }))
+	.filter((g) => g.people.length > 0);
+---
+
+<Base title="구성원">
+	<div class="container">
+		<header class="page-head">
+			<h1>구성원</h1>
+			<p>함께 연구하는 사람들입니다.</p>
+		</header>
+
+		{professors.length > 0 && (
+			<section class="group">
+				<h2>지도교수</h2>
+				{professors.map((m) => (
+					<article class="card profile">
+						{m.photo ? (
+							<img class="profile-photo" src={url(`images/members/${m.photo}`)} alt={m.name} />
+						) : (
+							<div class="avatar big" aria-hidden="true">{m.name.slice(0, 1)}</div>
+						)}
+						<div>
+							<h3>{m.name} <span class="muted en">{m.nameEn}</span></h3>
+							{m.interest && <p class="interest">{m.interest}</p>}
+							{m.email && <p><a href={`mailto:${m.email}`}>{m.email}</a></p>}
+							{m.note && <p class="muted">{m.note}</p>}
+							<div class="profile-lists">
+								{m.career && (
+									<div>
+										<h4>약력</h4>
+										<ul>{m.career.map((c) => <li>{c}</li>)}</ul>
+									</div>
+								)}
+								{m.awards && (
+									<div>
+										<h4>수상</h4>
+										<ul>{m.awards.map((a) => <li>{a}</li>)}</ul>
+									</div>
+								)}
+							</div>
+						</div>
+					</article>
+				))}
+			</section>
+		)}
+
+		{groups.map((g) => (
+			<section class="group">
+				<h2>{g.role}</h2>
+				<div class="grid">
+					{g.people.map((m) => (
+						<article class="card member">
+							{m.photo ? (
+								<img src={url(`images/members/${m.photo}`)} alt={m.name} loading="lazy" />
+							) : (
+								<div class="avatar" aria-hidden="true">{m.name.slice(0, 1)}</div>
+							)}
+							<div>
+								<h3>{m.name}</h3>
+								{m.nameEn && <p class="muted en">{m.nameEn}</p>}
+								{m.interest && <p class="interest">{m.interest}</p>}
+								{m.note && <p class="muted note">{m.note}</p>}
+								{m.email && <a href={`mailto:${m.email}`}>{m.email}</a>}
+							</div>
+						</article>
+					))}
+				</div>
+			</section>
+		))}
+	</div>
+</Base>
+
+<style>
+	.group { margin-top: 40px; }
+	.group h2 { font-size: 1.25rem; padding-bottom: 8px; border-bottom: 2px solid var(--accent); display: inline-block; }
+
+	.profile { display: grid; gap: 24px; }
+	@media (min-width: 640px) { .profile { grid-template-columns: 180px 1fr; } }
+	.profile-photo {
+		width: 180px;
+		aspect-ratio: 3 / 4;
+		object-fit: cover;
+		border-radius: var(--radius);
+	}
+	.profile h3 { margin: 0; font-size: 1.5rem; }
+	.profile h3 .en { font-size: 1rem; font-weight: 400; }
+	.profile p { margin: 4px 0; }
+	.profile-lists { display: grid; gap: 8px 32px; margin-top: 16px; }
+	@media (min-width: 900px) { .profile-lists { grid-template-columns: 3fr 2fr; } }
+	.profile h4 { margin: 8px 0 4px; color: var(--brand); }
+	.profile ul { margin: 0; padding-left: 18px; }
+	.profile li { margin: 2px 0; }
+
+	.member { display: flex; gap: 16px; align-items: flex-start; }
+	.member img, .avatar {
+		width: 72px;
+		height: 72px;
+		border-radius: 50%;
+		object-fit: cover;
+		object-position: top;
+		flex: none;
+	}
+	.avatar {
+		display: grid;
+		place-items: center;
+		background: var(--accent-soft);
+		color: var(--accent);
+		font-size: 1.6rem;
+		font-weight: 700;
+	}
+	.avatar.big { width: 180px; height: 180px; font-size: 3rem; border-radius: var(--radius); }
+	.member h3 { margin: 0; font-size: 1.1rem; }
+	.member p { margin: 2px 0; }
+	.en { font-size: 0.85rem; }
+	.interest { font-size: 0.92rem; }
+	.note { font-size: 0.85rem; }
+	.member a { font-size: 0.88rem; word-break: break-all; }
+</style>

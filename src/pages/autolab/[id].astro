@@ -1,0 +1,44 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { url } from '../../lib/site';
+
+export async function getStaticPaths() {
+	const runs = await getCollection('autolab');
+	return runs.map((entry) => ({ params: { id: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const d = entry.data;
+---
+
+<Base title={d.title} description={d.summary}>
+	<article class="container">
+		<p class="back"><a href={url('autolab')}>← AI 자동 연구</a></p>
+		<header class="page-head">
+			<p class="muted">{d.date} · {d.mode === 'wet-lab' ? '시편 실험 설계' : '전산 실험'} · {d.iterations}회 반복 · run <code>{entry.id}</code></p>
+			<h1>{d.title}</h1>
+			<p class="verdict"><span class={d.verdict.startsWith('PASS') ? 'pass' : 'incomplete'}>{d.verdict}</span> <strong>{d.score}</strong> / 100</p>
+		</header>
+		<div class="prose report"><Content /></div>
+		<p class="muted small note">※ AI 에이전트가 수행한 자동 연구 보고서입니다. 모델 예측·문헌 데이터 기반 결과는 실측 시험으로 검증이 필요합니다.</p>
+	</article>
+</Base>
+
+<style>
+	.back { margin: 32px 0 0; }
+	.page-head { padding-top: 16px; }
+	.verdict { display: flex; gap: 10px; align-items: baseline; font-size: 1.1rem; }
+	.verdict span { font-size: 0.85rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+	.pass { background: #e3f1e6; color: #1f6b35; }
+	.incomplete { background: #f3ecdc; color: #7a5a12; }
+	.report { max-width: 820px; margin-top: 24px; }
+	.report :global(table) { border-collapse: collapse; width: 100%; font-size: 0.92rem; display: block; overflow-x: auto; }
+	.report :global(th), .report :global(td) { border: 1px solid var(--line); padding: 6px 10px; text-align: left; }
+	.report :global(blockquote) { margin: 0; padding: 4px 16px; border-left: 3px solid var(--accent); color: var(--muted); }
+	.report :global(pre) { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); padding: 12px; border-radius: 8px; font-size: 0.85rem; }
+	.report :global(h2) { margin-top: 36px; }
+	.small { font-size: 0.85rem; }
+	.note { margin-top: 40px; }
+</style>
